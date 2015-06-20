@@ -7,6 +7,7 @@ from docker.errors import APIError
 
 from .config import get_service_name_from_net, ConfigurationError
 from .const import LABEL_PROJECT, LABEL_SERVICE, LABEL_ONE_OFF, DEFAULT_TIMEOUT
+from .proxy import proxy_links
 from .service import Service
 from .container import Container
 from .legacy import check_for_legacy_containers
@@ -77,8 +78,20 @@ class Project(object):
         project = cls(name, [], client)
         for service_dict in sort_service_dicts(service_dicts):
             links = project.get_links(service_dict)
+            for l in links:
+                print l[0].name
             volumes_from = project.get_volumes_from(service_dict)
             net = project.get_net(service_dict)
+            print "------------------->>>"
+            print service_dict
+            print client
+            print name
+            print links
+            print net
+            print volumes_from
+
+            links = proxy_links(service_dict['name'], links, project)
+            print links
 
             project.services.append(Service(client=client, project=name, links=links, net=net,
                                             volumes_from=volumes_from, **service_dict))
