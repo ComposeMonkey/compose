@@ -71,7 +71,7 @@ class Project(object):
         ]
 
     @classmethod
-    def from_dicts(cls, name, service_dicts, client):
+    def from_dicts(cls, name, service_dicts, client, monkey=False):
         """
         Construct a ServiceCollection from a list of dicts representing services.
         """
@@ -82,8 +82,9 @@ class Project(object):
             net = project.get_net(service_dict)
             print "------------------->>>"
 
-            open('/tmp/.monkey', 'w').close() # erase file if it exists
-            links = proxy_links(service_dict['name'], links, project)
+            if monkey:
+                open('/tmp/.monkey', 'w').close() # erase file if it exists
+                links = proxy_links(service_dict['name'], links, project, name)
 
             project.services.append(Service(client=client, project=name, links=links, net=net,
                                             volumes_from=volumes_from, **service_dict))

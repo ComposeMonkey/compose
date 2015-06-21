@@ -61,7 +61,8 @@ class Command(DocoptCommand):
         project = self.get_project(
             self.get_config_path(explicit_config_path),
             project_name=options.get('--project-name'),
-            verbose=options.get('--verbose'))
+            verbose=options.get('--verbose'),
+            monkey=options.get('--monkey') or options.get('m'))
 
         handler(project, command_options)
 
@@ -76,12 +77,13 @@ class Command(DocoptCommand):
             return verbose_proxy.VerboseProxy('docker', client)
         return client
 
-    def get_project(self, config_path, project_name=None, verbose=False):
+    def get_project(self, config_path, project_name=None, verbose=False, monkey=False):
         try:
             return Project.from_dicts(
                 self.get_project_name(config_path, project_name),
                 config.load(config_path),
-                self.get_client(verbose=verbose))
+                self.get_client(verbose=verbose),
+                monkey)
         except ConfigError as e:
             raise errors.UserError(six.text_type(e))
 
