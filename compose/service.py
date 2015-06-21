@@ -256,7 +256,7 @@ class Service(object):
 
         port, protocol = input.split(':')
 
-        self.options['command'] = "vaurien --http --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1} --behavior 100:dummy".format(protocol, port, self.links[0][0].name)
+        self.options['command'] = "vaurien --http --http-host 0.0.0.0 --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1} --behavior 100:dummy".format(protocol, port, self.links[0][0].name)
         return True
 
     def create_container(self,
