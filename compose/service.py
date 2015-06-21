@@ -158,6 +158,7 @@ class Service(object):
         # Create enough containers
         containers = self.containers(stopped=True)
         while len(containers) < desired_num:
+            print "333-------------------------"
             containers.append(self.create_container())
 
         running_containers = []
@@ -192,6 +193,46 @@ class Service(object):
                 log.info("Removing %s..." % c.name)
                 c.remove(**options)
 
+    def find_port(self, down_service):
+        inspect_dict = self.client.inspect_image(down_service.image_name)
+        config = inspect_dict.get('Config', {})
+        container_config = inspect_dict.get('ContainerConfig', {})
+
+        ports = config.get('ExposedPorts', {})
+        ports.update(container_config.get('ExposedPorts', {}))
+
+        ports_list = [port.split('/')[0] for port in ports.keys()]
+        ports_list += [str(a) for a in down_service.options.get('expose', [])]
+
+        if not ports_list:
+            return None
+
+        print "Available exposed PORTS for {0} are {1}.".format(down_service.name, ports_list)
+        return str(ports_list[0])
+
+
+    def populate_vaurien_command(self):
+        """Populate vaurien command after filling up PORT and the PROTOCOL
+        """
+
+        down_service = self.links[0][0]
+        dest = down_service.name
+        protocols = ['http', 'memcache', 'mysql', 'redis', 'smtp', 'tcp']
+        protocol = ''
+        for avlbl_proto in protocols:
+            if avlbl_proto in dest.lower():
+                protocol = avlbl_proto
+                break
+        port = self.find_port(down_service) or '3306'
+
+        print "Available PROTOCOLS: http/memcache/mysql/redis/smtp/tcp"
+        input = raw_input("Enter the PORT:PROTOCOL to connect {0} -> {1} (smart default: {3}:{2}): ".format(self.options['source'], dest, protocol, port))
+        if ':' not in input:
+            input = "{1}:{0}".format(protocol, port)
+        port, protocol = input.split(':')
+        self.options['command'] = "vaurien --http --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1} --behavior 100:dummy".format(protocol, port, self.links[0][0].name)
+        print self.options['command']
+
     def create_container(self,
                          one_off=False,
                          insecure_registry=False,
@@ -208,6 +249,9 @@ class Service(object):
             do_build=do_build,
             insecure_registry=insecure_registry,
         )
+
+        if self.options.get('command', '').startswith('vaurien'):
+            self.populate_vaurien_command()
 
         container_options = self._get_container_create_options(
             override_options,
@@ -297,6 +341,7 @@ class Service(object):
         (action, containers) = plan
 
         if action == 'create':
+            print "111----------------------------"
             container = self.create_container(
                 insecure_registry=insecure_registry,
                 do_build=do_build,
@@ -356,6 +401,7 @@ class Service(object):
             container.id,
             '%s_%s' % (container.short_id, container.name))
 
+        print "222----------------------------"
         new_container = self.create_container(
             insecure_registry=insecure_registry,
             do_build=False,

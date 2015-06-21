@@ -8,7 +8,8 @@ log = logging.getLogger(__name__)
 def create_proxy(service, source, project):
     service_dict = {'image': 'anchal/vaurien',
                     'name': source + service.name,
-                    'command': 'vaurien --http --http-port 2020 --protocol redis --proxy 0.0.0.0:6379 --backend '+service.name +':6379 --behavior 50:delay',
+                    'command': 'vaurien',
+                    'source': source
                     }
     new_service = Service(client=service.client,
                           project=service.project,
