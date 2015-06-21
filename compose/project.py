@@ -84,7 +84,7 @@ class Project(object):
 
             if monkey:
                 open('/tmp/.monkey', 'w').close() # erase file if it exists
-                links = proxy_links(service_dict['name'], links, project)
+                links = proxy_links(service_dict['name'], links, project, name)
 
             project.services.append(Service(client=client, project=name, links=links, net=net,
                                             volumes_from=volumes_from, **service_dict))
