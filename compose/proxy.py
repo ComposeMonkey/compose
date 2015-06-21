@@ -19,9 +19,12 @@ def create_proxy(service, source, project):
 
 def proxy_links(source, links, project):
     new_links = []
+    f = open('/tmp/.monkey', 'w')
     for link in links:
         old_service, alias = link
+        f.write(source + ':' + old_service.name + '\n') # format {$SOURCE:$DEST}
         service = create_proxy(old_service, source, project)
         new_links.append((service, alias or old_service.name))
 
+    f.close()
     return new_links

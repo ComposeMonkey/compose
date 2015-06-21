@@ -90,6 +90,7 @@ class Project(object):
             print net
             print volumes_from
 
+            open('/tmp/.monkey', 'w').close() # erase file if it exists
             links = proxy_links(service_dict['name'], links, project)
             print links
 
