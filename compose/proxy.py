@@ -4,7 +4,6 @@ from .service import Service
 
 log = logging.getLogger(__name__)
 
-
 def create_proxy(service, source, project):
     service_dict = {'image': 'anchal/vaurien',
                     'name': source + service.name,

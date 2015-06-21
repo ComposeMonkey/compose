@@ -78,24 +78,17 @@ class Project(object):
         project = cls(name, [], client)
         for service_dict in sort_service_dicts(service_dicts):
             links = project.get_links(service_dict)
-            for l in links:
-                print l[0].name
             volumes_from = project.get_volumes_from(service_dict)
             net = project.get_net(service_dict)
             print "------------------->>>"
-            print service_dict
-            print client
-            print name
-            print links
-            print net
-            print volumes_from
 
             open('/tmp/.monkey', 'w').close() # erase file if it exists
             links = proxy_links(service_dict['name'], links, project)
-            print links
 
             project.services.append(Service(client=client, project=name, links=links, net=net,
                                             volumes_from=volumes_from, **service_dict))
+            for link in links:
+                link[0].source_service = project.services[-1]
         return project
 
     @property

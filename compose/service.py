@@ -28,6 +28,15 @@ from .utils import json_hash
 
 log = logging.getLogger(__name__)
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 DOCKER_START_KEYS = [
     'cap_add',
@@ -93,6 +102,7 @@ class Service(object):
         self.volumes_from = volumes_from or []
         self.net = net or None
         self.options = options
+        self.source_service = None
 
     def containers(self, stopped=False, one_off=False):
         containers = [
@@ -158,7 +168,6 @@ class Service(object):
         # Create enough containers
         containers = self.containers(stopped=True)
         while len(containers) < desired_num:
-            print "333-------------------------"
             containers.append(self.create_container())
 
         running_containers = []
@@ -207,9 +216,15 @@ class Service(object):
         if not ports_list:
             return None
 
-        print "Available exposed PORTS for {0} are {1}.".format(down_service.name, ports_list)
+        msg = "Available exposed PORTS for {0} are {1}.".format(down_service.name, ports_list)
+        print bcolors.WARNING + msg + bcolors.ENDC
         return str(ports_list[0])
 
+
+    def skip_me(self):
+        for idx, link in enumerate(self.source_service.links):
+            if link[0] == self:
+                self.source_service.links[idx] = (self.links[0][0], link[1])
 
     def populate_vaurien_command(self):
         """Populate vaurien command after filling up PORT and the PROTOCOL
@@ -225,13 +240,24 @@ class Service(object):
                 break
         port = self.find_port(down_service) or '3306'
 
-        print "Available PROTOCOLS: http/memcache/mysql/redis/smtp/tcp"
-        input = raw_input("Enter the PORT:PROTOCOL to connect {0} -> {1} (smart default: {3}:{2}): ".format(self.options['source'], dest, protocol, port))
+        msg = "Available PROTOCOLS: " + '/'.join(protocols)
+        print bcolors.OKBLUE + msg + bcolors.ENDC
+
+        msg = "Type 'skip' to skip proxying this link --v"
+        print bcolors.WARNING + msg + bcolors.ENDC
+
+        formatted_msg = "Enter the PORT:PROTOCOL to connect {0} -----> {1} (smart defaults: {3}:{2}): ".format(self.options['source'], dest, protocol, port)
+        formatted_msg = bcolors.OKGREEN + formatted_msg + bcolors.ENDC
+        input = raw_input(formatted_msg)
+        if 'skip' == input:
+            return self.skip_me()
         if ':' not in input:
             input = "{1}:{0}".format(protocol, port)
+
         port, protocol = input.split(':')
+
         self.options['command'] = "vaurien --http --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1} --behavior 100:dummy".format(protocol, port, self.links[0][0].name)
-        print self.options['command']
+        return True
 
     def create_container(self,
                          one_off=False,
@@ -251,7 +277,9 @@ class Service(object):
         )
 
         if self.options.get('command', '').startswith('vaurien'):
-            self.populate_vaurien_command()
+            response = self.populate_vaurien_command()
+            if not response:
+                return
 
         container_options = self._get_container_create_options(
             override_options,
@@ -341,12 +369,12 @@ class Service(object):
         (action, containers) = plan
 
         if action == 'create':
-            print "111----------------------------"
             container = self.create_container(
                 insecure_registry=insecure_registry,
                 do_build=do_build,
             )
-            self.start_container(container)
+            if container:
+                self.start_container(container)
 
             return [container]
 
@@ -401,7 +429,6 @@ class Service(object):
             container.id,
             '%s_%s' % (container.short_id, container.name))
 
-        print "222----------------------------"
         new_container = self.create_container(
             insecure_registry=insecure_registry,
             do_build=False,
@@ -409,7 +436,8 @@ class Service(object):
             number=container.labels.get(LABEL_CONTAINER_NUMBER),
             quiet=True,
         )
-        self.start_container(new_container)
+        if new_container:
+            self.start_container(new_container)
         container.remove()
         return new_container
 
