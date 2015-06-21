@@ -84,7 +84,7 @@ class TopLevelCommand(Command):
       -p, --project-name NAME   Specify an alternate project name (default: directory name)
       --verbose                 Show more output
       -v, --version             Print version and exit
-      -m, --monkey              Run DockSweeper
+      -m, --monkey              Run ComposeMonkey 
 
     Commands:
       build              Build or rebuild services
