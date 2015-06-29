@@ -11,6 +11,7 @@ from docker.errors import APIError
 from docker.utils import create_host_config, LogConfig
 
 from . import __version__
+from .cli import colors
 from .config import DOCKER_CONFIG_KEYS, merge_environment
 from .const import (
     DEFAULT_TIMEOUT,
@@ -103,6 +104,7 @@ class Service(object):
         self.net = net or None
         self.options = options
         self.source_service = None
+        self.composemonkey = None
 
     def containers(self, stopped=False, one_off=False):
         containers = [
@@ -216,12 +218,15 @@ class Service(object):
         if not ports_list:
             return None
 
-        msg = "Available exposed PORTS for {0} are {1}.".format(down_service.name, ports_list)
-        print bcolors.WARNING + msg + bcolors.ENDC
+        yellow = colors.get_color('yellow')
+        print "Available exposed PORTS for {0} are {1}.".format(
+            yellow(down_service.name), yellow(', '.join(ports_list)))
         return str(ports_list[0])
 
 
     def skip_me(self):
+        self.composemonkey.links = filter(lambda link: link[0] != self)
+
         for idx, link in enumerate(self.source_service.links):
             if link[0] == self:
                 self.source_service.links[idx] = (self.links[0][0], link[1])
@@ -240,23 +245,26 @@ class Service(object):
                 break
         port = self.find_port(down_service) or '3306'
 
-        msg = "Available PROTOCOLS: " + '/'.join(protocols)
-        print bcolors.OKBLUE + msg + bcolors.ENDC
+        blue = colors.get_color('blue')
+        instense_red = colors.get_color('intense_red')
+        green = colors.get_color('green')
+        cyan = colors.get_color('cyan')
+        print "Available PROTOCOLS: " + '/'.join(map(blue, protocols))
 
-        msg = "Type 'skip' to skip proxying this link --v"
-        print bcolors.WARNING + msg + bcolors.ENDC
+        print "Type '%s' to skip proxying this link --v, press ENTER for defaults." % instense_red('skip')
 
-        formatted_msg = "Enter the PORT:PROTOCOL to connect {0} -----> {1} (smart defaults: {3}:{2}): ".format(self.options['source'], dest, protocol, port)
-        formatted_msg = bcolors.OKGREEN + formatted_msg + bcolors.ENDC
+        formatted_msg = "Enter the {4} to connect {0} -----> {1} [{3}:{2}] : ".format(green(self.options['source']), green(dest), blue(protocol), blue(port), cyan('PORT:PROTOCOL'))
         input = raw_input(formatted_msg)
+        if not input:
+            input = "{1}:{0}".format(protocol, port)
         if 'skip' == input:
             return self.skip_me()
-        if ':' not in input:
-            input = "{1}:{0}".format(protocol, port)
 
+        if ':' not in input or input.split(':')[1] not in protocols:
+            raise Exception('Malformed link input!')
         port, protocol = input.split(':')
 
-        self.options['command'] = "vaurien --http --http-host 0.0.0.0 --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1} --behavior 100:dummy".format(protocol, port, self.links[0][0].name)
+        self.options['command'] = "vaurien --http --http-host 0.0.0.0 --http-port 2020 --protocol {0} --proxy 0.0.0.0:{1} --backend {2}:{1}".format(protocol, int(port), self.links[0][0].name)
         return True
 
     def create_container(self,
@@ -276,10 +284,16 @@ class Service(object):
             insecure_registry=insecure_registry,
         )
 
-        if self.options.get('command', '').startswith('vaurien'):
+        if self.options.get('command') == 'vaurien':
             response = self.populate_vaurien_command()
             if not response:
                 return
+
+        if self.name == 'composemonkey':
+            links = ','.join([link[1] for link in self.links])
+            if 'environment' not in self.options:
+                self.options['environment'] = {}
+            self.options['environment']['links'] = links
 
         container_options = self._get_container_create_options(
             override_options,

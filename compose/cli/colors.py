@@ -33,6 +33,9 @@ for (name, code) in get_pairs():
     globals()[name] = make_color_fn(code)
 
 
+def get_color(name):
+    return globals()[name]
+
 def rainbow():
     cs = ['cyan', 'yellow', 'green', 'magenta', 'red', 'blue',
           'intense_cyan', 'intense_yellow', 'intense_green',

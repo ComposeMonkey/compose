@@ -7,7 +7,7 @@ from docker.errors import APIError
 
 from .config import get_service_name_from_net, ConfigurationError
 from .const import LABEL_PROJECT, LABEL_SERVICE, LABEL_ONE_OFF, DEFAULT_TIMEOUT
-from .proxy import proxy_links
+from .proxy import create_ui, proxy_links
 from .service import Service
 from .container import Container
 from .legacy import check_for_legacy_containers
@@ -63,6 +63,7 @@ class Project(object):
         self.name = name
         self.services = services
         self.client = client
+        self.composemonkey = None
 
     def labels(self, one_off=False):
         return [
@@ -76,20 +77,23 @@ class Project(object):
         Construct a ServiceCollection from a list of dicts representing services.
         """
         project = cls(name, [], client)
+        if monkey:
+            composemonkey = create_ui(project, client, name)
+
         for service_dict in sort_service_dicts(service_dicts):
             links = project.get_links(service_dict)
             volumes_from = project.get_volumes_from(service_dict)
             net = project.get_net(service_dict)
-            print "------------------->>>"
 
             if monkey:
-                open('/tmp/.monkey', 'w').close() # erase file if it exists
-                links = proxy_links(service_dict['name'], links, project, name)
+                links = proxy_links(service_dict['name'], links, project, name, composemonkey)
 
             project.services.append(Service(client=client, project=name, links=links, net=net,
                                             volumes_from=volumes_from, **service_dict))
-            for link in links:
-                link[0].source_service = project.services[-1]
+            if monkey:
+                for link in links:
+                    link[0].source_service = project.services[-1]
+                    link[0].composemonkey = composemonkey
         return project
 
     @property
