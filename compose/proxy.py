@@ -5,9 +5,8 @@ from .service import Service
 log = logging.getLogger(__name__)
 
 def create_ui(project, client, name):
-    service_dict = {'image': 'training/webapp',
+    service_dict = {'image': 'prat0318/flask_monkey',
                     'name': 'composemonkey',
-                    'command': 'tail -f /dev/null',
                     }
     new_service = Service(client=client, project=name, **service_dict)
     project.services.append(new_service)

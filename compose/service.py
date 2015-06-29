@@ -290,6 +290,11 @@ class Service(object):
                 return
 
         if self.name == 'composemonkey':
+            blue = colors.get_color('blue')
+            formatted_msg = "Port number on the host for launching UI interface [{0}] : ".format(blue('2020'))
+            input = raw_input(formatted_msg)
+            self.options['ports'] = [input + ':2020']
+
             links = ','.join([link[1] for link in self.links])
             if 'environment' not in self.options:
                 self.options['environment'] = {}

@@ -49,7 +49,7 @@ if sys.version_info < (2, 7):
 
 
 setup(
-    name='docker-compose',
+    name='compose-monkey',
     version=find_version("compose", "__init__.py"),
     description='Multi-container orchestration for Docker',
     url='https://www.docker.com/',
