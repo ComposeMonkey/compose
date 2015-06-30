@@ -1,6 +1,10 @@
-Docker Compose
-==============
-*(Previously known as Fig)*
+Compose Monkey
+===============
+
+Resiliency testing tool for docker-compose
+------------------------------------------
+
+[![asciicast](https://asciinema.org/a/22706.png)](https://asciinema.org/a/22706)
 
 Compose is a tool for defining and running multi-container applications with
 Docker. With Compose, you define a multi-container application in a single
