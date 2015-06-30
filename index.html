@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<title>Compose Monkey</title>
+
+<div style="text-align: center">
+    <script type="text/javascript" src="https://asciinema.org/a/22706.js" id="asciicast-22706" async data-speed="1.8"></script>
+</div>
+
+<xmp theme="united" style="display:none;">
+#ComposeMonkey - Resiliency testing tool for docker-compose
+------
+
+##Quick Install
+
+Go to your existing application containing `fig.yml` config. And then:
+
+```bash
+$ pip install compose-monkey
+$ docker-compose --monkey up
+```
+
+**Note** : `-m` / `--monkey` is the flag to activate `ComposeMonkey` and without that flag, `docker-compose` will run as usual.
+
+If everything goes fine, a UI server gets started at the port 2020 (configurable) exposed on the host machine.
+
+##What is Compose Monkey
+Compose Monkey is a resiliency testing tool for applications running through `docker-compose`. It is a fork of [compose](https://github.com/docker/compose) which adds an opt-in feature to test the scenarios where the downstream services become flaky/down/slow.
+
+It also provides a UI port to control the behavior of all the downstream services in real time. On start, all the downstream services behave as normal i.e. the proxy exhibits dummy behvaior.
+
+Compose Monkey :
+
+* Smartly suggests port and TCP protocol for the destination link
+* Option to skip proxy creation for any link
+* UI controller to change the behvaior of the link in real time.
+
+##How it works
+Internally, it uses a package [Vaurien](http://vaurien.readthedocs.org/) which provides TCP proxy and behavior simulation. For every link, ComposeMonkey injects a Vaurien container between the source and the destination service. To start a Vaurien container, it needs the TCP [protocol](http://vaurien.readthedocs.org/en/1.8/protocols.html) and the port needed to talk to the destination. ComposeMonkey makes a best effort strategy to find those and shows them to the user as defaults.
+
+Destination Port is found by searching for `exposed port` of the destination, if any. Protocol is suggested naively by checking the downstream service name. User has the option to provide port/protocol of their choice if not satisfied with the defaults.
+
+```
+      +------------+           +-------------+            
+      |            |           |             |            
+      |    WEB     +----------->    REDIS    |            
+      |            |           |             |            
+      +------------+           +-------------+            
+                                                          
+                     Without --monkey                     
+                                                          
+                                                          
+
+|                                                               |
+|---------------------------------------------------------------|
+|                                                               |
+
+                                                          
++------------+        +------------+        +------------+
+|            |        |            |        |            |
+|    WEB     +--------> COMPOSMNKY +-------->    REDIS   |
+|            |        |            |        |            |
++------------+        +-----^------+        +------------+
+                            |                             
+                            |                             
+                            |                             
+                      +-----+------+                      
+                      |            |                      
+                      |     UI     |                      
+                      |            |                      
+                      +------------+                      
+                                                          
+                                                          
+                       With --monkey                      
+```
+
+##Future Work
+
+ComposeMonkey can also be built and packaged outside of docker-compose. This can be implemented by creating a temporary `fig.yml` from the original config yaml file which has a vaurien container entry for each downstream link and single UI container which links all the proxy containers. This work is still in development.
+</xmp>
+
+<p><a href="https://github.com/ComposeMonkey/compose"><img alt="Fork me on GitHub" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" style="position: fixed; top: 0; right: 0; border: 0; z-index: 1000; margin: 0;"></a></p>
+<script src="http://strapdownjs.com/v/0.2/strapdown.js"></script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-64628756-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+<div style="background:#fafaff; min-height:40px; padding:0 85px; margin:0">
+  <div style="float:left;">
+    <img src="https://g.twimg.com/Twitter_logo_blue.png" style="width:40px; margin:0; padding-top:5px; margin-right:10px;">
+  </div>
+  <div style="padding-top:15px; padding-bottom:10px;">
+    Follow the authors <a href="http://twitter.com/prat0318">@prat0318</a>, <a href="http://twitter.com/AgrawalAnchal">@AgrawalAnchal</a>, <a href="http://twitter.com/jharjono">@jharjono</a> on Twitter
+  </div>
+</div>
+</html>
