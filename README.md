@@ -6,51 +6,69 @@ Resiliency testing tool for docker-compose
 
 [![asciicast](https://asciinema.org/a/22706.png)](https://asciinema.org/a/22706)
 
-Compose is a tool for defining and running multi-container applications with
-Docker. With Compose, you define a multi-container application in a single
-file, then spin your application up in a single command which does everything
-that needs to be done to get it running.
+##Quick Install
 
-Compose is great for development environments, staging servers, and CI. We don't
-recommend that you use it in production yet.
+Go to your existing application containing `fig.yml` config. And then:
 
-Using Compose is basically a three-step process.
+```bash
+$ pip install compose-monkey
+$ docker-compose --monkey up
+```
 
-1. Define your app's environment with a `Dockerfile` so it can be
-reproduced anywhere.
-2. Define the services that make up your app in `docker-compose.yml` so
-they can be run together in an isolated environment:
-3. Lastly, run `docker-compose up` and Compose will start and run your entire app.
+**Note** : `-m` / `--monkey` is the flag to activate `ComposeMonkey` and without that flag, `docker-compose` will run as usual.
 
-A `docker-compose.yml` looks like this:
+If everything goes fine, a UI server gets started at the port 2020 (configurable) exposed on the host machine.
 
-    web:
-      build: .
-      ports:
-       - "5000:5000"
-      volumes:
-       - .:/code
-      links:
-       - redis
-    redis:
-      image: redis
+##What is Compose Monkey
+Compose Monkey is a resiliency testing tool for applications running through `docker-compose`. It is a fork of [compose](https://github.com/docker/compose) which adds an opt-in feature to test the scenarios where the downstream services become flaky/down/slow.
 
-Compose has commands for managing the whole lifecycle of your application:
+It also provides a UI port to control the behavior of all the downstream services in real time. On start, all the downstream services behave as normal i.e. the proxy exhibits dummy behvaior.
 
- * Start, stop and rebuild services
- * View the status of running services
- * Stream the log output of running services
- * Run a one-off command on a service
+Compose Monkey :
 
-Installation and documentation
-------------------------------
+* Smartly suggests port and TCP protocol for the destination link
+* Option to skip proxy creation for any link
+* UI controller to change the behvaior of the link in real time.
 
-- Full documentation is available on [Docker's website](http://docs.docker.com/compose/).
-- If you have any questions, you can talk in real-time with other developers in the #docker-compose IRC channel on Freenode. [Click here to join using IRCCloud.](https://www.irccloud.com/invite?hostname=irc.freenode.net&channel=%23docker-compose)
+##How it works
+Internally, it uses a package [Vaurien](http://vaurien.readthedocs.org/) which provides TCP proxy and behavior simulation. For every link, ComposeMonkey injects a Vaurien container between the source and the destination service. To start a Vaurien container, it needs the TCP [protocol](http://vaurien.readthedocs.org/en/1.8/protocols.html) and the port needed to talk to the destination. ComposeMonkey makes a best effort strategy to find those and shows them to the user as defaults.
 
-Contributing
-------------
+Destination Port is found by searching for `exposed port` of the destination, if any. Protocol is suggested naively by checking the downstream service name. User has the option to provide port/protocol of their choice if not satisfied with the defaults.
 
-[![Build Status](http://jenkins.dockerproject.org/buildStatus/icon?job=Compose%20Master)](http://jenkins.dockerproject.org/job/Compose%20Master/)
+```
+      +------------+           +-------------+            
+      |            |           |             |            
+      |    WEB     +----------->    REDIS    |            
+      |            |           |             |            
+      +------------+           +-------------+            
+                                                          
+                     Without --monkey                     
+                                                          
+                                                           
 
-Want to help build Compose? Check out our [contributing documentation](https://github.com/docker/compose/blob/master/CONTRIBUTING.md).
+|                                                               |
+|---------------------------------------------------------------|
+|                                                               |
+
+                                                          
++------------+        +------------+        +------------+
+|            |        |            |        |            |
+|    WEB     +--------> COMPOSMNKY +-------->    REDIS   |
+|            |        |            |        |            |
++------------+        +-----^------+        +------------+
+                            |                             
+                            |                             
+                            |                             
+                      +-----+------+                      
+                      |            |                      
+                      |     UI     |                      
+                      |            |                      
+                      +------------+                      
+                                                          
+                                                          
+                       With --monkey                      
+```
+
+##Future Work
+
+ComposeMonkey can also be built and packaged outside of docker-compose. This can be implemented by creating a temporary `fig.yml` from the original config yaml file which has a vaurien container entry for each downstream link and single UI container which links all the proxy containers. This work is still in development.
